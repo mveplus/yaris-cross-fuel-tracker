@@ -1,0 +1,32 @@
+[
+    {
+        "date": "23-01-01 12:00",
+        "odometer": 1000.1,
+        "fuel": 10,
+        "fuel_price": 2.5,
+        "total_fuel_price": 25.0,
+        "mpg": 0,
+        "total_fuel": 10,
+        "predicted_mpg": 0
+    },
+    {
+        "date": "23-02-01 12:00",
+        "odometer": 1500.5,
+        "fuel": 20,
+        "fuel_price": 2.5,
+        "total_fuel_price": 50.0,
+        "mpg": 0,
+        "total_fuel": 30,
+        "predicted_mpg": 0
+    },
+    {
+        "date": "23-03-01 12:00",
+        "odometer": 2000.9,
+        "fuel": 15,
+        "fuel_price": 2.5,
+        "total_fuel_price": 37.5,
+        "mpg": 0,
+        "total_fuel": 45,
+        "predicted_mpg": 0
+    }
+]

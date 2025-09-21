@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Tracker</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Fuel Tracker</h1>
+        <form id="entryForm">
+            <label for="date">Date (optional):</label>
+            <input type="datetime-local" id="date" name="date">
+            <label for="odometer">Odometer:</label>
+            <input type="number" step="0.1" id="odometer" name="odometer" required>
+            <label for="fuel_price">Fuel Price (per litre):</label>
+            <input type="number" step="0.01" id="fuel_price" name="fuel_price" required>
+            <label for="fuel">Fuel (litres):</label>
+            <input type="number" step="0.01" id="fuel" name="fuel" required>
+            <button type="submit">Add Entry</button>
+        </form>
+
+        <h2>Entries</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Odometer</th>
+                    <th>Fuel Price</th>
+                    <th>Fuel</th>
+                    <th>Total Fuel Price</th>
+                    <th>MPG</th>
+                    <th>Select</th>
+                </tr>
+            </thead>
+            <tbody id="entries">
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.date.split(' ')[0][2:] }} {{ entry.date.split(' ')[1][:5] }}</td>
+                    <td>{{ '%.0f' % entry.odometer }}</td>
+                    <td>{{ entry.fuel_price }}</td>
+                    <td>{{ entry.fuel }}</td>
+                    <td>{{ entry.total_fuel_price }}</td>
+                    <td>{{ '%.2f' % entry.mpg }}</td>
+                    <td><input type="checkbox" class="select-entry" data-index="{{ loop.index0 }}"></td>
+                </tr>
+                {% endfor %}
+                <!-- Summary row -->
+                <tr id="summaryRow" style="font-weight: bold;">
+                    <td colspan="4">Total Fuel Price:</td>
+                    <td id="totalFuelPrice">-</td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr style="font-weight: bold;">
+                    <td colspan="4">Latest Odometer Reading:</td>
+                    <td id="latestOdometer">-</td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr style="font-weight: bold;">
+                    <td colspan="4">Price per Mile Ratio:</td>
+                    <td id="pricePerMileRatio">-</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button id="editData" disabled>Edit Selected</button>
+        <button id="deleteData" disabled>Delete Selected</button>
+
+        <button id="exportData">Export Data</button>
+        <button id="importData">Import Data</button>
+        <button id="restoreBackup">Restore Backup</button>
+    </div>
+
+    <!-- Hidden file input for importing data -->
+    <input type="file" id="importFile" style="display: none;">
+
+    <script src="/static/scripts.js"></script>
+    <script>
+        // Fetch and display the summary data
+        async function fetchSummary() {
+            const response = await fetch('/summary');
+            const summary = await response.json();
+            document.getElementById('totalFuelPrice').innerText = summary.total_fuel_price.toFixed(2);
+            document.getElementById('latestOdometer').innerText = summary.latest_odometer.toFixed(1);
+            document.getElementById('pricePerMileRatio').innerText = summary.price_per_mile_ratio.toFixed(2);
+        }
+        
+        fetchSummary();
+
+        document.getElementById('entryForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {};
+            formData.forEach((value, key) => data[key] = value);
+
+            const response = await fetch('/add', {
+                method: 'POST',
+                body: new URLSearchParams(data)
+            });
+            const json = await response.json();
+            console.log(json);  // Process the JSON response
+            location.reload();  // Refresh the page to update the entry list
+        });
+
+        function updateButtonsState() {
+            const selectedEntries = document.querySelectorAll('.select-entry:checked');
+            document.getElementById('editData').disabled = selectedEntries.length !== 1;
+            document.getElementById('deleteData').disabled = selectedEntries.length === 0;
+        }
+
+        document.querySelectorAll('.select-entry').forEach(checkbox => {
+            checkbox.addEventListener('change', updateButtonsState);
+        });
+
+        document.getElementById('deleteData').addEventListener('click', async function() {
+            if (confirm('Are you sure you want to delete selected entries?')) {
+                const selectedEntries = document.querySelectorAll('.select-entry:checked');
+                const indices = Array.from(selectedEntries).map(entry => entry.getAttribute('data-index'));
+                const response = await fetch('/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ indices: indices })
+                });
+                const json = await response.json();
+                console.log(json);  // Process the JSON response
+                location.reload();  // Refresh the page to update the entry list
+            }
+        });
+
+        document.getElementById('editData').addEventListener('click', async function() {
+            const selectedEntries = document.querySelector('.select-entry:checked');
+            const index = selectedEntries.getAttribute('data-index');
+            const row = selectedEntries.closest('tr');
+            const date = row.children[0].innerText.split(' ')[0].replace('/', '-') + 'T' + row.children[0].innerText.split(' ')[1];
+            const odometer = row.children[1].innerText;
+            const fuel_price = row.children[2].innerText;
+            const fuel = row.children[3].innerText;
+
+            document.getElementById('date').value = date;
+            document.getElementById('odometer').value = parseFloat(odometer).toFixed(1);
+            document.getElementById('fuel_price').value = fuel_price;
+            document.getElementById('fuel').value = fuel;
+
+            document.getElementById('entryForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const data = {};
+                formData.forEach((value, key) => data[key] = value);
+
+                const response = await fetch(`/edit/${index}`, {
+                    method: 'POST',
+                    body: new URLSearchParams(data)
+                });
+                const json = await response.json();
+                console.log(json);  // Process the JSON response
+                location.reload();  // Refresh the page to update the entry list
+            }, { once: true });
+        });
+
+        document.getElementById('exportData').addEventListener('click', async function() {
+            window.location.href = '/export';
+        });
+
+        document.getElementById('importData').addEventListener('click', async function() {
+            const importFileInput = document.getElementById('importFile');
+            importFileInput.click();
+        });
+
+        document.getElementById('importFile').addEventListener('change', async function() {
+            const importFile = this.files[0];
+            if (importFile) {
+                const formData = new FormData();
+                formData.append('file', importFile);
+                const response = await fetch('/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await response.json();
+                console.log(json);  // Process the JSON response
+                location.reload();  // Refresh the page to update the entry list
+            }
+        });
+
+        document.getElementById('restoreBackup').addEventListener('click', async function() {
+            if (confirm('Are you sure you want to restore the backup?')) {
+                const response = await fetch('/restore', {
+                    method: 'POST'
+                });
+                const json = await response.json();
+                console.log(json);  // Process the JSON response
+                location.reload();  // Refresh the page to update the entry list
+            }
+        });
+    </script>
+</body>
+</html>
