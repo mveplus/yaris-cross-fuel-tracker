@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > This project is no loger active and it's in legacy state!
 > It has real fuel logs for Y2023 Toyota Yaris Cross Hybrid fuel consumtion for about [3 years](https://docs.google.com/spreadsheets/d/1Psswf3a8JgH6fmbby0ZQmih4PRZ8sYcgBenS9qLGIWI/edit?usp=sharing)
-> --Many things could change and there are a lot of moving parts ;)--
+> ~~Many things could change and there are a lot of moving parts ;)~~
 
 1. Flasky Goodness: Our backend’s running on Flask, the web framework for cool cats.
 2. JSON Jive: Store your fuel data in a slick JSON file.
